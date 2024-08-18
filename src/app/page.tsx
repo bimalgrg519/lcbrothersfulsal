@@ -1,11 +1,24 @@
 "use client";
 import { useState } from "react";
 
+function shuffleArray(array) {
+  // Create a shallow copy of the original array
+  const arrayCopy = [...array];
+
+  // Fisher-Yates shuffle algorithm
+  for (let i = arrayCopy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arrayCopy[i], arrayCopy[j]] = [arrayCopy[j], arrayCopy[i]];
+  }
+
+  return arrayCopy;
+}
+
 function shuffleTeams(pairs: any) {
   const teamA: any = [];
   const teamB: any = [];
 
-  pairs.forEach((pair: any) => {
+  shuffleArray(pairs).forEach((pair: any) => {
     // Randomly assign the first member of the pair to either teamA or teamB
     if (Math.random() > 0.5) {
       teamA.push(pair[0]);
@@ -20,6 +33,7 @@ function shuffleTeams(pairs: any) {
 }
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [players, setPlayers] = useState<any[]>([
     {
@@ -108,6 +122,10 @@ export default function Home() {
     const { teamA, teamB } = shuffleTeams(teamPair);
     setTeamA(teamA);
     setTeamB(teamB);
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
   };
 
   const handleAdd = () => {
@@ -130,33 +148,43 @@ export default function Home() {
     setPlayers([...players, ...removedPlayers]);
   };
 
+  const team1Players = players.filter(
+    (player) => player.id !== selectedPlayer2.id
+  );
+  const team2Players = players.filter(
+    (player) => player.id !== selectedPlayer1.id
+  );
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-4">
+    <main className="flex min-h-screen flex-col items-center justify-between p-4 text-xl">
       <div className="z-10 w-full max-w-5xl font-mono">
-        <h1 className="text-xl">LC Brotherhood</h1>
+        <h1 className="text-2xl leading-loose">LC Brotherhood</h1>
         <div className="flex space-x-2">
           <input
-            className="text-black px-2"
+            className="text-black px-2 h-10"
             value={playerName}
             onChange={(e) => {
               setPlayerName(e.target.value);
             }}
           />
-          <button className="bg-blue-300 px-4 text-black" onClick={handleAdd}>
+          <button
+            className="bg-blue-300 px-4 text-black font-bold"
+            onClick={handleAdd}
+          >
             Add
           </button>
         </div>
         <div className="flex gap-x-3 gap-y-3 mt-3 flex-wrap">
           {players.map((player) => (
-            <div key={player.id} className="border px-2">
+            <div key={player.id} className="font-bold">
               <h1>{player.name}</h1>
             </div>
           ))}
         </div>
         <div className="mt-8">
-          <div className="w-full flex p-2 space-x-2">
+          <div className="w-full flex space-x-2">
             <select
-              className="text-black w-full"
+              className="text-black w-full h-10"
               value={selectedPlayer1 ? selectedPlayer1.id : ""}
               onChange={(e) => {
                 setSelectedPlayer1(
@@ -167,14 +195,14 @@ export default function Home() {
               <option value="" disabled>
                 Player 1
               </option>
-              {players.map((player) => (
-                <option key={player.id} value={player.id} className="text-xl">
+              {team1Players.map((player) => (
+                <option key={player.id} value={player.id} className="">
                   {player.name}
                 </option>
               ))}
             </select>
             <select
-              className="text-black w-full"
+              className="text-black w-full h-10"
               value={selectedPlayer2 ? selectedPlayer2.id : ""}
               onChange={(e) => {
                 setSelectedPlayer2(
@@ -185,79 +213,77 @@ export default function Home() {
               <option value="" disabled>
                 Player 2
               </option>
-              {players.map((player) => (
+              {team2Players.map((player) => (
                 <option key={player.id} value={player.id}>
                   {player.name}
                 </option>
               ))}
             </select>
             <button
-              className="bg-blue-300 px-4 text-black"
+              className="bg-blue-300 px-4 text-black font-bold"
               onClick={handleSubmit}
             >
               Submit
             </button>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 mt-10">
             <div className="flex-1">
               <div className="flex">
                 <h2 className="flex-1">Team 1</h2>
                 <h2 className="flex-1">Team 2</h2>
               </div>
-              {
-                <div className="space-y-2">
-                  {teamPair.map((players: any, index) => (
-                    <div key={index} className="flex space-x-2">
-                      <div className="flex-1 border px-2">
-                        <h1>{players[0].name}</h1>
-                      </div>
-                      <div className="flex-1 border px-2">
-                        <h1>{players[1].name}</h1>
-                      </div>
-                      <button
-                        className="bg-red-600 px-4 rounded"
-                        onClick={() => handleRemove(players)}
-                      >
-                        Remove
-                      </button>
+              <div className="space-y-2 mt-2">
+                {teamPair.map((players: any, index) => (
+                  <div key={index} className="flex space-x-2">
+                    <div className="flex-1 border p-2 ">
+                      <h1 className="">{players[0].name}</h1>
                     </div>
-                  ))}
-                </div>
-              }
+                    <div className="flex-1 border p-2">
+                      <h1>{players[1].name}</h1>
+                    </div>
+                    <button
+                      className="bg-red-600 px-4 rounded"
+                      onClick={() => handleRemove(players)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <button
             onClick={handleSuffle}
-            className="bg-blue-200 text-black p-2 rounded my-4"
+            className="bg-blue-200 text-black p-2 rounded font-bold mt-6"
           >
-            Suffle
+            Shuffle
           </button>
-          <div className="flex">
-            <div className="flex-1">
-              <h2>Team 1</h2>
-              {
-                <div className="flex flex-col space-y-2">
+          {isLoading ? (
+            <h2>Loading...</h2>
+          ) : teamA.length > 0 && teamB.length > 0 ? (
+            <div className="flex mt-6 space-x-4">
+              <div className="flex-1">
+                <h2>Team 1</h2>
+                <div className="">
                   {teamA.map((player: any) => (
-                    <div key={player.id} className="border px-2">
-                      <h1>{player.name}</h1>
+                    <div key={player.id} className="border p-2">
+                      <h1 className="">{player.name}</h1>
                     </div>
                   ))}
                 </div>
-              }
-            </div>
-            <div className="flex-1">
-              <h2>Team 2</h2>
-              {
-                <div className="flex flex-col space-y-2">
+              </div>
+              <div className="flex-1">
+                <h2>Team 2</h2>
+                <div className="">
                   {teamB.map((player: any) => (
-                    <div key={player.id} className="border px-2">
+                    <div key={player.id} className="border p-2">
                       <h1>{player.name}</h1>
                     </div>
                   ))}
                 </div>
-              }
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </main>
