@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function shuffleArray(array) {
   // Create a shallow copy of the original array
@@ -14,26 +14,48 @@ function shuffleArray(array) {
   return arrayCopy;
 }
 
-function shuffleTeams(pairs: any) {
+function shuffleTeams(pairs: any, isThreeTeams: boolean) {
   const teamA: any = [];
   const teamB: any = [];
+  const teamC: any = [];
 
-  shuffleArray(pairs).forEach((pair: any) => {
-    // Randomly assign the first member of the pair to either teamA or teamB
-    if (Math.random() > 0.5) {
-      teamA.push(pair[0]);
-      teamB.push(pair[1]);
-    } else {
-      teamA.push(pair[1]);
-      teamB.push(pair[0]);
-    }
-  });
+  if (isThreeTeams) {
+    shuffleArray(pairs).forEach((pair: any) => {
+      const random = Math.random();
+      if (random < 0.3) {
+        teamA.push(pair[0]);
+        teamB.push(pair[2]);
+        teamC.push(pair[1]);
+      } else if (random < 0.6) {
+        teamA.push(pair[2]);
+        teamB.push(pair[1]);
+        teamC.push(pair[0]);
+      } else {
+        teamA.push(pair[1]);
+        teamB.push(pair[0]);
+        teamC.push(pair[2]);
+      }
+    });
+  } else {
+    shuffleArray(pairs).forEach((pair: any) => {
+      // Randomly assign the first member of the pair to either teamA or teamB
+      if (Math.random() > 0.5) {
+        teamA.push(pair[0]);
+        teamB.push(pair[1]);
+      } else {
+        teamA.push(pair[1]);
+        teamB.push(pair[0]);
+      }
+    });
+  }
 
-  return { teamA, teamB };
+  return { teamA, teamB, teamC };
 }
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
+  const [clickedCount, setClickedCount] = useState(0);
+  const [isThreeTeams, setIsThreeTeams] = useState(false);
   const [playerName, setPlayerName] = useState("");
   const [players, setPlayers] = useState<any[]>([
     {
@@ -102,30 +124,72 @@ export default function Home() {
 
   const [selectedPlayer1, setSelectedPlayer1] = useState<any>("");
   const [selectedPlayer2, setSelectedPlayer2] = useState<any>("");
+  const [selectedPlayer3, setSelectedPlayer3] = useState<any>("");
 
   const [teamA, setTeamA] = useState<any[]>([]);
   const [teamB, setTeamB] = useState<any[]>([]);
+  const [teamC, setTeamC] = useState<any[]>([]);
+
+  useEffect(() => {
+    const teamPair = localStorage.getItem("teamPair");
+    if (teamPair) {
+      const tempTeamPair = JSON.parse(teamPair);
+      setTeamPair(tempTeamPair);
+
+      // Flatten the teamPair array
+      const flattenedTeamPair = tempTeamPair.flat();
+
+      // Filter out players who are in the teamPair array
+      const remainingPlayers = players.filter(
+        (player) =>
+          !flattenedTeamPair.some((teamPlayer) => teamPlayer.id === player.id)
+      );
+      setPlayers(remainingPlayers);
+    }
+    // eslint-disable-next-line
+  }, []);
 
   const handleSubmit = () => {
     if (selectedPlayer1 && selectedPlayer2) {
-      const filteredPlayers = players.filter(
-        (p) => p.id !== selectedPlayer1.id && p.id !== selectedPlayer2.id
-      );
+      let filteredPlayers;
+
+      if (isThreeTeams) {
+        filteredPlayers = players.filter(
+          (p) =>
+            p.id !== selectedPlayer1.id &&
+            p.id !== selectedPlayer2.id &&
+            p.id !== selectedPlayer3.id
+        );
+      } else {
+        filteredPlayers = players.filter(
+          (p) => p.id !== selectedPlayer1.id && p.id !== selectedPlayer2.id
+        );
+      }
       setPlayers(filteredPlayers);
-      setTeamPair([...teamPair, [selectedPlayer1, selectedPlayer2]]);
+      if (isThreeTeams) {
+        setTeamPair([
+          ...teamPair,
+          [selectedPlayer1, selectedPlayer2, selectedPlayer3],
+        ]);
+      } else {
+        setTeamPair([...teamPair, [selectedPlayer1, selectedPlayer2]]);
+      }
       setSelectedPlayer1("");
       setSelectedPlayer2("");
+      setSelectedPlayer3("");
     }
   };
 
   const handleSuffle = () => {
-    const { teamA, teamB } = shuffleTeams(teamPair);
+    const { teamA, teamB, teamC } = shuffleTeams(teamPair, isThreeTeams);
     setTeamA(teamA);
     setTeamB(teamB);
+    setTeamC(teamC);
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
+    localStorage.setItem("teamPair", JSON.stringify(teamPair));
   };
 
   const handleAdd = () => {
@@ -154,6 +218,10 @@ export default function Home() {
   const team2Players = players.filter(
     (player) => player.id !== selectedPlayer1.id
   );
+  const team3Players = players.filter(
+    (player) =>
+      player.id !== selectedPlayer1.id && player.id !== selectedPlayer2.id
+  );
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-4 text-xl">
@@ -180,6 +248,25 @@ export default function Home() {
               <h1>{player.name}</h1>
             </div>
           ))}
+        </div>
+        <div className="mt-4">
+          <button
+            text-black
+            font-bold
+            className={`px-4 py-1 rounded-md text-gray-900 ${
+              isThreeTeams ? "bg-green-300 font-semibold" : "bg-gray-300"
+            }
+            `}
+            onClick={() => {
+              setClickedCount(clickedCount + 1);
+
+              if (clickedCount === 3) {
+                setIsThreeTeams(!isThreeTeams);
+              }
+            }}
+          >
+            Three teams
+          </button>
         </div>
         <div className="mt-8">
           <div className="w-full flex space-x-2">
@@ -226,11 +313,32 @@ export default function Home() {
               Submit
             </button>
           </div>
+          {isThreeTeams && (
+            <select
+              className="text-black w-full h-10 mt-3"
+              value={selectedPlayer3 ? selectedPlayer3.id : ""}
+              onChange={(e) => {
+                setSelectedPlayer3(
+                  players.find((player) => player.id === Number(e.target.value))
+                );
+              }}
+            >
+              <option value="" disabled>
+                Player 3
+              </option>
+              {team3Players.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="flex space-x-2 mt-10">
             <div className="flex-1">
               <div className="flex">
                 <h2 className="flex-1">Team 1</h2>
                 <h2 className="flex-1">Team 2</h2>
+                {isThreeTeams && <h2 className="flex-1">Team 3</h2>}
               </div>
               <div className="space-y-2 mt-2">
                 {teamPair.map((players: any, index) => (
@@ -241,11 +349,16 @@ export default function Home() {
                     <div className="flex-1 border p-2">
                       <h1>{players[1].name}</h1>
                     </div>
+                    {isThreeTeams && (
+                      <div className="flex-1 border p-2">
+                        <h1>{players[2].name}</h1>
+                      </div>
+                    )}
                     <button
                       className="bg-red-600 px-4 rounded"
                       onClick={() => handleRemove(players)}
                     >
-                      Remove
+                      X
                     </button>
                   </div>
                 ))}
@@ -282,6 +395,18 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+              {isThreeTeams && (
+                <div className="flex-1">
+                  <h2>Team 3</h2>
+                  <div className="">
+                    {teamC.map((player: any) => (
+                      <div key={player.id} className="border p-2">
+                        <h1>{player.name}</h1>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
         </div>
